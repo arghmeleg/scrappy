@@ -30,6 +30,7 @@ defmodule Scrappy do
   def save(session, body_mutator) do
     index_filename = Path.join(save_dir(), htmlize("#{session.url.path}?#{session.url.query}"))
     File.mkdir_p(save_dir())
+
     local_body =
       session.body
       |> body_mutator.()
@@ -55,12 +56,13 @@ defmodule Scrappy do
       |> Floki.find("script[src]")
       |> Enum.map(fn script -> element_attribute(script, "src") end)
 
-    css_urls ++ img_urls ++ js_urls
+    (css_urls ++ img_urls ++ js_urls)
     |> Enum.each(fn asset_url -> save_asset(session, asset_url) end)
   end
 
   defp local_asset_name(asset_url) do
     uri = URI.parse(asset_url)
+
     extname =
       if Path.extname(uri.path) == "" do
         Path.extname(uri.query)
@@ -74,6 +76,7 @@ defmodule Scrappy do
       else
         uri.path
       end
+
     local_path =
       local_path
       |> String.replace(~r/[^\w\/]+/, "-")
@@ -98,11 +101,14 @@ defmodule Scrappy do
 
   def save_asset(session, asset_url) do
     local_filename = local_asset_name(asset_url)
+
     if !File.exists?(local_filename) do
       session = go_to(session, asset_url)
+
       if session.status != :error do
         File.mkdir_p(Path.dirname(local_filename))
         File.write(local_filename, session.body)
+
         if asset_url =~ ".css" do
           save_css_assets(session)
         end
@@ -113,7 +119,8 @@ defmodule Scrappy do
   end
 
   defp save_css_assets(session) do
-    asset_urls = Regex.scan(~r/url\(['"]?(?<file>.*)['"]?\)/Um, session.body, capture: :all_names) || []
+    asset_urls =
+      Regex.scan(~r/url\(['"]?(?<file>.*)['"]?\)/Um, session.body, capture: :all_names) || []
 
     dir_name = URI.parse(session.url).path |> Path.dirname()
 
@@ -121,10 +128,12 @@ defmodule Scrappy do
     |> Enum.each(fn [asset_url] ->
       asset_url = String.trim(asset_url, "'")
       asset_path = dir_name |> Path.join(asset_url) |> Path.expand() |> Path.relative_to_cwd()
+
       try do
         save_asset(session, asset_path)
-      rescue _e ->
-        debug("UNFETCHABLE #{asset_path}")
+      rescue
+        _e ->
+          debug("UNFETCHABLE #{asset_path}")
       end
     end)
   end
@@ -137,6 +146,7 @@ defmodule Scrappy do
   end
 
   def go_to(url), do: go_to(%Session{}, url)
+
   def go_to(session, url) do
     url =
       session.url
@@ -156,6 +166,7 @@ defmodule Scrappy do
     form = Floki.find(session.body, css)
     form_action = form |> Floki.attribute("action") |> List.first() |> URI.parse()
     form_url = URI.merge(session.url, form_action)
+
     form_inputs =
       form
       |> Floki.find("input")
@@ -163,7 +174,11 @@ defmodule Scrappy do
       |> Map.merge(form_data)
       |> URI.encode_query()
 
-    response = HTTPoison.post!(form_url, form_inputs, %{"Content-Type" => "application/x-www-form-urlencoded"})
+    response =
+      HTTPoison.post!(form_url, form_inputs, %{
+        "Content-Type" => "application/x-www-form-urlencoded"
+      })
+
     session = %{session | url: form_url, body: response.body}
 
     append_cookies_and_follow_redirect(session, response)
@@ -185,8 +200,11 @@ defmodule Scrappy do
 
   defp append_cookies_and_follow_redirect(session, response, "3" <> _redirect) do
     session = append_cookies(session, response)
-    location = Enum.find_value(response.headers, fn {name, value} -> name == "Location" && value end)
-    if(to_string(session.url) == location, do: raise "Circular redirect")
+
+    location =
+      Enum.find_value(response.headers, fn {name, value} -> name == "Location" && value end)
+
+    if(to_string(session.url) == location, do: raise("Circular redirect"))
     go_to(session, location)
   end
 
@@ -198,7 +216,10 @@ defmodule Scrappy do
     cookies =
       response.headers
       |> Enum.filter(fn {header, _value} -> header == "Set-Cookie" end)
-      |> Enum.map(fn {_header, value} -> value |> String.split(" ") |> List.first() |> String.trim(";") end)
+      |> Enum.map(fn {_header, value} ->
+        value |> String.split(" ") |> List.first() |> String.trim(";")
+      end)
+
     %{session | cookies: Enum.uniq(session.cookies ++ cookies)}
   end
 end
