@@ -138,7 +138,7 @@ defmodule Scrappy do
     end)
   end
 
-  defp htmlize(string) do
+  def htmlize(string) do
     string
     |> String.replace(~r/\W/, "-")
     |> String.trim("-")
