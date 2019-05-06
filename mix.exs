@@ -27,7 +27,8 @@ defmodule Scrappy.MixProject do
   defp deps do
     [
       {:httpoison, "1.5.0"},
-      {:floki, "~> 0.20.4"}
+      {:floki, "~> 0.20.4"},
+      {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end
 
