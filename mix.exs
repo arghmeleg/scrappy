@@ -2,14 +2,13 @@ defmodule Scrappy.MixProject do
   use Mix.Project
 
   @description "Scrappy is a scraper."
-  @version "0.1.0"
+  @version "0.1.1"
   def project do
     [
       app: :scrappy,
       name: "Scrappy",
       version: @version,
       description: @description,
-      version: "0.1.0",
       elixir: "~> 1.8",
       package: package(),
       start_permanent: Mix.env() == :prod,

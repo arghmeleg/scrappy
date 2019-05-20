@@ -156,8 +156,8 @@ defmodule Scrappy do
 
     debug(to_string(url))
 
-    response = HTTPoison.get!(url, %{}, hackney: [cookie: Enum.join(session.cookies, "; ")])
-    session = %{session | url: URI.parse(url), body: response.body, status: nil}
+    response = HTTPoison.get!(url, [], hackney: [cookie: Enum.join(session.cookies, "; ")])
+    session = %{session | url: URI.parse(url), body: response.body, status: nil, headers: response.headers}
 
     append_cookies_and_follow_redirect(session, response)
   end
